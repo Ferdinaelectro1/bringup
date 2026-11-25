@@ -3,6 +3,11 @@ edition = "2024"
 name = "{{project_name}}"
 version = "0.1.0"
 
+[[bin]]
+name = "{{project_name}}"
+test = false
+bench = false
+
 [dependencies]
 embassy-executor = { version = "0.10.0", features = ["defmt"] }
 embassy-time = { version = "0.5.1", features = ["defmt", "defmt-timestamp-uptime"] }

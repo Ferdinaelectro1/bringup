@@ -1,4 +1,4 @@
-use crate::config::{Feature, Ide, ProjectConfig, Target, Template};
+use crate::config::{Feature, ProjectConfig, Target, Template};
 use cliclack::{input, multiselect, select};
 use std::{error::Error, format, path::{Path, PathBuf}};
 
@@ -29,19 +29,11 @@ pub fn ask_config(project_name: Option<String>) -> Result<ProjectConfig, Box<dyn
         .item(Template::BareMetal, "Bare Metal Project", "")
         .interact()?;
 
-    let selected_ide = select("Select your IDE")
-        .item(Ide::Vscode, "VSCode", "")
-        .item(Ide::RustRover, "RustRover", "")
-        .item(Ide::Zed, "Zed", "")
-        .item(Ide::Other, "Other", "")
-        .interact()?;
-
     Ok(ProjectConfig {
         project_name,
         target: selected_target,
         features: selected_features,
         template: selected_template,
-        ide: selected_ide,
     })
 }
 

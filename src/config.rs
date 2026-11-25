@@ -54,19 +54,10 @@ pub enum Template {
     BareMetal,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub enum Ide {
-    Vscode,
-    RustRover,
-    Zed,
-    Other,
-}
-
 #[derive(Debug)]
 pub struct ProjectConfig {
     pub project_name: String,
     pub target: Target,
     pub features: Vec<Feature>,
     pub template: Template,
-    pub ide: Ide,
 }
