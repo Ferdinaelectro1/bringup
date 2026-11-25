@@ -1,14 +1,16 @@
 use crate::config::{Feature, Ide, ProjectConfig, Target, Template};
-use cliclack::{input, intro, multiselect, outro, select};
-use std::error::Error;
+use cliclack::{input, multiselect, select};
+use std::{error::Error, format, path::{Path, PathBuf}};
 
 pub fn ask_config(project_name: Option<String>) -> Result<ProjectConfig, Box<dyn Error>> {
-    intro("Let's create your project")?;
-
     let project_name = match project_name {
         Some(name) => name,
         None => get_interactive_project_name()?,
     };
+
+    if Path::exists(&PathBuf::from(&project_name)) {
+        return Err(format!("Directory '{}' already exists",&project_name).into());
+    }
 
     let selected_target = select("Choose your target platform!")
         .item(Target::Pico, "pico", "")
@@ -33,8 +35,6 @@ pub fn ask_config(project_name: Option<String>) -> Result<ProjectConfig, Box<dyn
         .item(Ide::Zed, "Zed", "")
         .item(Ide::Other, "Other", "")
         .interact()?;
-
-    outro("End of configuration")?;
 
     Ok(ProjectConfig {
         project_name,

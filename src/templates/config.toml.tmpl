@@ -1,0 +1,8 @@
+[target.'cfg(all(target_arch = "arm", target_os = "none"))']
+runner = "{{target_runner}}"
+
+[build]
+target = "{{rust_target}}"
+
+[env]
+DEFMT_LOG = "debug"

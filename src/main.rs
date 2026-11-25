@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
-use std::{error::Error, println};
+use std::{eprintln, error::Error, format};
+use cliclack::{confirm, intro,note, outro, outro_cancel};
 
 mod config;
 mod prompt;
@@ -21,18 +22,29 @@ enum Commands {
 fn main() {
     let cli: Cli = Cli::parse();
     if let Err(e) = run(cli) {
-        eprintln!("Error: {}", e);
+        match outro_cancel(format!("Error: {}", e)) {
+            Ok(()) => {},
+            Err(e) => {
+                eprintln!("{e}")
+            }
+        }
         std::process::exit(1);
     }
 }
 
 fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
+    intro("Let's create your project")?;
     let user_config = match cli.command {
-        Commands::New { project_name } => ask_config(project_name)?,
+        Commands::New { project_name } => ask_config(project_name)? 
     };
 
-    println!("{:-^50}", "Project Configuration");
-    println!("{:#?}", user_config);
-    generate(&user_config)?;
+    note("Project Configuration",format!("{:#?}", user_config))?;
+    let cf = confirm("Create the project?").initial_value(true).interact()?;
+    if cf {
+        generate(&user_config)?;
+        outro("Done!")?;
+    } else {
+        outro("Canceled configuration")?;
+    }
     Ok(())
 }
