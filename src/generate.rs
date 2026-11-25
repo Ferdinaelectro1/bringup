@@ -1,6 +1,8 @@
 use std::error::Error;
+use std::format;
 use std::fs::{create_dir_all,write};
 use std::path::{PathBuf};
+use std::process::{Command};
 
 use cliclack::spinner;
 
@@ -20,7 +22,7 @@ pub fn generate(config: &ProjectConfig) -> Result<(),Box<dyn Error>> {
         }
     }
 
-    spinner.stop("Your project has been created successfuly!");
+    spinner.stop("Your project has been created successfully!");
     Ok(())
 }
 
@@ -40,6 +42,17 @@ fn write_project_files(config: &ProjectConfig) -> Result<(),Box<dyn Error>> {
     let cargo_toml_content = include_str!("templates/Cargo.toml.tmpl");
     let cargo_toml_content = cargo_toml_content.replace("{{project_name}}", &config.project_name);
     write(dir.join("Cargo.toml"), cargo_toml_content)?;
+
+    // Init git
+    let output = Command::new("git")
+    .arg("init")
+    .current_dir(dir)
+    .output()?;
+
+    if !output.status.success() {
+        return Err(format!("Failed to initialize git. {}",String::from_utf8_lossy(&output.stderr)).into());
+    }
+
 
     Ok(())
 }
