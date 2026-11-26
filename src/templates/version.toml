@@ -1,0 +1,13 @@
+[package]
+edition = "2024"
+version = "0.1.0"
+
+[dependencies]
+embassy-executor-version = "0.10.0"
+embassy-time-version = "0.5.1"
+embassy-rp-version = "0.10.0"
+defmt-version = "1.0.1"
+defmt-rtt-version = "1.0.0"
+cortex-m-version = "0.7.6"
+cortex-m-rt-version = "0.7.0"
+panic-probe-version = "1.0.0"

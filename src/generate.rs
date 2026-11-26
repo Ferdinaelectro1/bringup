@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::error::Error;
 use std::format;
 use std::fs::{create_dir_all,write};
@@ -5,6 +6,8 @@ use std::path::{PathBuf};
 use std::process::{Command};
 
 use cliclack::{note, spinner};
+use serde::{Deserialize};
+use minijinja::{context};
 
 use crate::config::{ProjectConfig, Target, Template};
 
@@ -41,38 +44,47 @@ fn write_project_files(config: &ProjectConfig) -> Result<(),Box<dyn Error>> {
     write(src_path.join("main.rs"),main_rs_content)?;
 
     //Generate .gitignore
-    write(dir.join(".gitignore"), "/target")?;
+    write(dir.join(".gitignore"), "/target\n")?;
 
     //Generate Cargo.toml
-    let cargo_toml_content = include_str!("templates/Cargo.toml.tmpl");
-    let cargo_toml_content = cargo_toml_content.replace("{{project_name}}", &config.project_name);
-    let cargo_toml_content = cargo_toml_content.replace("{{chip_feature}}", &config.target.chip_feature());
-    write(dir.join("Cargo.toml"), cargo_toml_content)?;
+    let versions = load_versions()?;
+    let env = build_env()?;
+    let cargo_toml_tmpl = env.get_template("cargo_toml_tmpl")?;
+    let cargo_toml_new_content = cargo_toml_tmpl.render(context! {
+        project_name => &config.project_name,
+        chip_feature => &config.target.chip_feature(),
+        version => versions.package.version,
+        edition => versions.package.edition,
+        dependencies => versions.dependencies
+    })?;
+    write(dir.join("Cargo.toml"), cargo_toml_new_content)?;
 
     //Generate config.toml
-    let config_toml_content = include_str!("templates/config.toml.tmpl");
-    let config_toml_content = config_toml_content.replace("{{target_runner}}", &config.target.runner());
-    let config_toml_content = config_toml_content.replace("{{rust_target}}", &config.target.rust_target());  
+    let config_toml_new_content = env.get_template("config_toml_tmpl")?.render(context! {
+        target_runner => &config.target.runner(),
+        rust_target => &config.target.rust_target()
+    })?;
     let dot_cargo_dir = dir.join(".cargo");
     create_dir_all(&dot_cargo_dir)?;
-    write(dot_cargo_dir.join("config.toml"),config_toml_content)?;
+    write(dot_cargo_dir.join("config.toml"),config_toml_new_content)?;
 
+
+    //Generate build.rs
+    let build_rs_new_content = env.get_template("build_rs_tmpl")?.render(context! {
+        has_boot2 => config.target == Target::Pico
+    })?;
+    write(dir.join("build.rs"), build_rs_new_content)?;
+    
     match config.target {
         Target::Pico => {
             //Generate memory.x
             let memory_x_content = include_str!("templates/pico/memory.x.tmpl");
             write(dir.join("memory.x"), memory_x_content)?;
-            //Generate build.rs
-            let build_rs_content: &str = include_str!("templates/pico/build.rs.tmpl");
-            write(dir.join("build.rs"), build_rs_content)?;
         },
         Target::Pico2 => {
             //Generate memory.x
             let memory_x_content = include_str!("templates/pico2/memory.x.tmpl");
             write(dir.join("memory.x"), memory_x_content)?;
-            //Generate build.rs
-            let build_rs_content = include_str!("templates/pico2/build.rs.tmpl");
-            write(dir.join("build.rs"), build_rs_content)?;
         }
     }
 
@@ -87,4 +99,42 @@ fn write_project_files(config: &ProjectConfig) -> Result<(),Box<dyn Error>> {
     }
 
     Ok(())
+}
+
+#[derive(Deserialize,Debug)]
+pub struct Package {
+    pub version: String,
+    pub edition: String
+}
+
+#[derive(Deserialize,Debug)]
+pub struct Versions {
+    pub package: Package,
+    pub dependencies: HashMap<String,String>
+}
+
+pub fn load_versions() -> Result<Versions,Box<dyn Error>>{
+    let version_file_content = include_str!("templates/version.toml");
+    let v : Versions = toml::from_str(version_file_content)?;
+    Ok(v)
+}
+
+fn build_env<'a>() -> Result<minijinja::Environment<'a>,Box<dyn Error>> {
+    let mut env = minijinja::Environment::new();
+    env.set_undefined_behavior(minijinja::UndefinedBehavior::Strict);
+
+    //Add Cargo.toml template
+    let cargo_toml_content = include_str!("templates/Cargo.toml.tmpl");
+    env.add_template("cargo_toml_tmpl", cargo_toml_content)?;
+
+
+    //Add config.toml template
+    let config_toml_content = include_str!("templates/config.toml.tmpl");
+    env.add_template("config_toml_tmpl", config_toml_content)?;
+
+    //Add build.rs template
+    let build_rs_content: &str = include_str!("templates/build.rs.tmpl");
+    env.add_template("build_rs_tmpl", build_rs_content)?;
+
+    Ok(env)
 }
