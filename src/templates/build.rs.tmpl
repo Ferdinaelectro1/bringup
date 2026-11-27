@@ -34,5 +34,7 @@ fn main() {
     {% if has_boot2 -%}
     println!("cargo:rustc-link-arg-bins=-Tlink-rp.x");
     {% endif -%}
+    {% if logging -%}
     println!("cargo:rustc-link-arg-bins=-Tdefmt.x");
+    {% endif -%}
 }

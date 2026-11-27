@@ -9,15 +9,17 @@ test = false
 bench = false
 
 [dependencies]
-embassy-executor = { version = "{{ dependencies["embassy-executor-version"] }}", features = ["defmt"] }
-embassy-time = { version = "{{ dependencies["embassy-time-version"] }}", features = ["defmt", "defmt-timestamp-uptime"] }
-embassy-rp = { version = "{{ dependencies["embassy-rp-version"] }}", features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl", "{{chip_feature}}", "executor-thread", "executor-interrupt"] }
+embassy-executor = { version = "{{ dependencies["embassy-executor-version"] }}"{% if logging -%}, features = ["defmt"] {% endif -%}}
+embassy-time = { version = "{{ dependencies["embassy-time-version"] }}"{% if logging -%}, features = ["defmt", "defmt-timestamp-uptime"] {% endif -%}}
+embassy-rp = { version = "{{ dependencies["embassy-rp-version"] }}", features = [{% if logging -%}"defmt", {% endif -%}"unstable-pac", "time-driver", "critical-section-impl", "{{chip_feature}}", "executor-thread", "executor-interrupt"] }
+{% if logging -%}
 defmt = "{{ dependencies["defmt-version"] }}"
 defmt-rtt = "{{ dependencies["defmt-rtt-version"] }}"
+{% endif -%}
 
 cortex-m = { version = "{{ dependencies["cortex-m-version"] }}", features = ["inline-asm"] }
 cortex-m-rt = "{{ dependencies["cortex-m-rt-version"] }}"
-panic-probe = { version = "{{ dependencies["panic-probe-version"] }}", features = ["print-defmt"] }
+panic-probe = { version = "{{ dependencies["panic-probe-version"] }}"{% if logging -%}, features = ["print-defmt"] {% endif -%}}
 
 [profile.release]
 # Enable generation of debug symbols even on release builds

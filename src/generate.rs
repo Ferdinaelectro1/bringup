@@ -31,14 +31,21 @@ pub fn generate(config: &ProjectConfig) -> Result<(),Box<dyn Error>> {
 }
 
 fn write_project_files(config: &ProjectConfig) -> Result<(),Box<dyn Error>> {
+    let env = build_env()?;
     let dir = PathBuf::from(&config.project_name);
 
     let src_path = dir.join("src");
     create_dir_all(&src_path)?;
 
+    let new_content = env.get_template("main_rs_embassy")?.render(context! {
+        logging => !config.features.is_empty()
+    })?;
+
     let main_rs_content = match config.template {
-        Template::BareMetal => include_str!("templates/main.baremetal.rs.tmpl"),
-        Template::Embassy => include_str!("templates/main.embassy.rs.tmpl")
+        Template::BareMetal => include_str!("templates/main.baremetal.rs.tmpl").to_string(),
+        Template::Embassy => {
+            new_content
+        }
     }; 
 
     write(src_path.join("main.rs"),main_rs_content)?;
@@ -48,21 +55,22 @@ fn write_project_files(config: &ProjectConfig) -> Result<(),Box<dyn Error>> {
 
     //Generate Cargo.toml
     let versions = load_versions()?;
-    let env = build_env()?;
     let cargo_toml_tmpl = env.get_template("cargo_toml_tmpl")?;
     let cargo_toml_new_content = cargo_toml_tmpl.render(context! {
         project_name => &config.project_name,
         chip_feature => &config.target.chip_feature(),
         version => versions.package.version,
         edition => versions.package.edition,
-        dependencies => versions.dependencies
+        dependencies => versions.dependencies,
+        logging => !config.features.is_empty()
     })?;
     write(dir.join("Cargo.toml"), cargo_toml_new_content)?;
 
     //Generate config.toml
     let config_toml_new_content = env.get_template("config_toml_tmpl")?.render(context! {
         target_runner => &config.target.runner(),
-        rust_target => &config.target.rust_target()
+        rust_target => &config.target.rust_target(),
+        logging => !config.features.is_empty()
     })?;
     let dot_cargo_dir = dir.join(".cargo");
     create_dir_all(&dot_cargo_dir)?;
@@ -71,7 +79,8 @@ fn write_project_files(config: &ProjectConfig) -> Result<(),Box<dyn Error>> {
 
     //Generate build.rs
     let build_rs_new_content = env.get_template("build_rs_tmpl")?.render(context! {
-        has_boot2 => config.target == Target::Pico
+        has_boot2 => config.target == Target::Pico,
+        logging   => !config.features.is_empty()
     })?;
     write(dir.join("build.rs"), build_rs_new_content)?;
     
@@ -136,5 +145,9 @@ fn build_env<'a>() -> Result<minijinja::Environment<'a>,Box<dyn Error>> {
     let build_rs_content: &str = include_str!("templates/build.rs.tmpl");
     env.add_template("build_rs_tmpl", build_rs_content)?;
 
+    //Add main.rs embassy template
+    let main_rs_embassy_content = include_str!("templates/main.embassy.rs.tmpl");
+    env.add_template("main_rs_embassy",main_rs_embassy_content)?;
+    
     Ok(env)
 }

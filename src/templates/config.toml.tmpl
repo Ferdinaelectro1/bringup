@@ -4,5 +4,7 @@ runner = "{{target_runner}}"
 [build]
 target = "{{rust_target}}"
 
+{% if logging -%}
 [env]
 DEFMT_LOG = "debug"
+{% endif -%}
